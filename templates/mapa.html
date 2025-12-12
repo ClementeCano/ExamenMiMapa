@@ -2,210 +2,178 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Mi Mapa - {{ email_usuario }}</title>
+    <title>ReViews | Reseñas y mapa</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     
     <style>
-        #map { 
-            height: 500px; width: 100%; border-radius: 10px; 
-        }
-        .thumbnail { 
-            max-width: 100px; max-height: 100px; 
-        }
-        .token-preview {
-            font-family: "SFMono-Regular", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-            background: #f8f9fa;
-            border: 1px solid #e9ecef;
-            border-radius: 8px;
-            padding: 6px 10px;
-            word-break: break-all;
-        }
-        .token-full {
-            font-family: "SFMono-Regular", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-            word-break: break-all;
-            display: block;
-            background: #f1f3f5;
-            padding: 8px 10px;
-            border-radius: 8px;
-            border: 1px solid #e9ecef;
-        }
-        .visit-log li + li {
-            border-top: 1px dashed #e9ecef;
-        }
-        .visit-log .visit-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #0d6efd, #6ea8fe);
-            box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.12);
-        }
+        body { background: #f8fafc; }
+        #map { height: 420px; width: 100%; border-radius: 10px; }
+        .token-box { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; word-break: break-all; }
+        .review-card { border: 1px solid #e2e8f0; border-radius: 12px; transition: box-shadow .2s ease; }
+        .review-card:hover { box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12); }
+        .image-thumb { max-width: 120px; max-height: 120px; border-radius: 10px; object-fit: cover; }
     </style>
 </head>
 <body class="container py-4">
 
-    <div class="d-flex justify-content-between align-items-center mb-3">
+    <header class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h1 class="mb-0">Mapa de: {{ email_usuario }}</h1>
-            <p class="text-muted mb-0">Sesión iniciada como {{ email_actual }}</p>
-            {% if not puede_editar %}
-                <div class="alert alert-info mt-2 mb-0" role="alert">
-                    Estás visitando el mapa de otro usuario. No puedes añadir marcadores aquí.
-                </div>
-            {% endif %}
+             <h1 class="mb-0">ReViews</h1>
+            <p class="text-muted mb-0">Autenticado como {{ user.name }} ({{ user.email }})</p>
         </div>
-        <a href="/" class="btn btn-outline-danger">Salir</a>
-    </div>
-
-
-    <div class="card mb-4">
-        <div class="card-header">Visitar otro mapa</div>
-            <div class="card-body">        <div class="card-body">
-            <form class="row g-2 align-items-end" method="get" action="/mapa">
-                <div class="col-md-8">
-                    <label for="email" class="form-label">Email del mapa a visitar</label>
-                    <input type="email" name="email" id="email" class="form-control" placeholder="usuario@example.com" required>
-                </div>
-                <div class="col-md-4 d-grid">
-                    <button type="submit" class="btn btn-primary">Ver mapa</button>
-                </div>
-            </form>
+        <div class="d-flex align-items-center gap-3">
+            <img src="{{ user.picture }}" alt="avatar" width="48" class="rounded-circle shadow-sm">
+            <a href="/logout" class="btn btn-outline-danger">Cerrar sesión</a>
         </div>
-    </div>
+    </header>
 
-    <div id="map" class="mb-4 shadow-sm"></div>
-
-    {% if puede_editar %}
-        <div class="card mb-4">
-            <div class="card-header bg-success text-white">Añadir Nuevo Destino</div>
-            <div class="card-body">
-                <form action="/web/nuevo-marcador" method="post" enctype="multipart/form-data">
-
-                    <input type="hidden" name="email" value="{{ email_usuario }}">
-
-                    <div class="row">
-                        <div class="col-md-5">
-                            <input type="text" name="ciudad" class="form-control" placeholder="Ciudad o País (Ej: París, Francia)" required>
-                        </div>
-                        <div class="col-md-5">
-                            <input type="file" name="imagen" class="form-control" accept="image/*" required>
-                        </div>
-                        <div class="col-md-2">
-                            <button type="submit" class="btn btn-success w-100">Añadir</button>
-                        </div>
+    <div class="row g-4">
+        <section class="col-lg-7">
+            <div class="card review-card mb-3">
+                <div class="card-header d-flex align-items-center justify-content-between">
+                    <div>
+                        <h5 class="mb-0">Mapa de reseñas</h5>
+                        <small class="text-muted">Marcadores geolocalizados a partir de la dirección postal</small>
                     </div>
-                </form>
+                    <div class="d-flex gap-2">
+                        <input type="text" id="searchAddress" class="form-control form-control-sm" placeholder="Centra el mapa: Calle...">
+                        <button class="btn btn-primary btn-sm" onclick="buscarDireccion()">Buscar</button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div id="map"></div>
+                </div>
             </div>
-        </div>
-    {% else %}
-        <div class="alert alert-secondary mb-4" role="alert">
-            Para añadir marcadores vuelve a tu propio mapa.
-        </div>
-    {% endif %}
 
-    <div class="card mb-4 shadow-sm">
-        <div class="card-header d-flex align-items-center gap-2">
-            <span class="badge text-bg-primary">Visitas</span>
-            <h5 class="mb-0">Historial reciente</h5>
-        </div>
-        <div class="card-body p-0">
-            <ul class="list-group list-group-flush visit-log">
-    {% if visitas and visitas|length > 0 %}
-        {% for visita in visitas %}
-            {% if visita.email_visitante != email_actual %}  <!-- Excluimos tu correo -->
-                <li class="list-group-item">
-                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
-                        <div class="d-flex align-items-center gap-2">
-                            <div class="visit-dot"></div>
-                            <div>
-                                <div class="fw-semibold">{{ visita.email_visitante }}</div>
-                                <div class="text-muted small">{{ visita.timestamp.strftime("%Y-%m-%d %H:%M:%S") if visita.timestamp else "Sin fecha" }}</div>
-                            </div>
+                    <div class="card review-card">
+                <div class="card-header d-flex align-items-center justify-content-between">
+                    <h5 class="mb-0">Reseñas registradas</h5>
+                    <span class="badge text-bg-primary">{{ reviews|length }} en total</span>
+                </div>
+                <div class="list-group list-group-flush">
+                    {% if reviews %}
+                        {% for review in reviews %}
+                            <a href="/reviews?selected={{ review.id }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                <div>
+                                    <div class="fw-semibold">{{ review.name }}</div>
+                                    <div class="text-muted small">{{ review.address }}</div>
+                                </div>
+                                <span class="badge text-bg-warning text-dark">{{ review.rating }} / 5</span>
+                            </a>
+                        {% endfor %}
+                    {% else %}
+                        <div class="list-group-item text-muted">Aún no hay reseñas creadas.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </section>
+
+                    <section class="col-lg-5">
+            <div class="card review-card mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">Crear nueva reseña</h5>
+                </div>
+                <div class="card-body">
+                    <form action="/reviews" method="post" enctype="multipart/form-data" class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label">Nombre del establecimiento</label>
+                            <input type="text" name="name" class="form-control" placeholder="Casa Lola" required>
                         </div>
-                        <span class="badge text-bg-light text-muted">OAuth</span>
-                    </div>
+                        <div class="col-12">
+                            <label class="form-label">Dirección postal</label>
+                            <input type="text" name="address" class="form-control" placeholder="Calle Granada 46, Málaga" required>
+                            <small class="text-muted">Se usará para calcular las coordenadas GPS.</small>
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label">Valoración (0-5)</label>
+                            <input type="number" name="rating" min="0" max="5" class="form-control" value="4" required>
+                        </div>
+                        <div class="col-8">
+                            <label class="form-label">Imágenes</label>
+                            <input type="file" name="images" class="form-control" accept="image/*" multiple>
+                        </div>
+                        <div class="col-12">
+                            <button class="btn btn-success w-100" type="submit">Publicar reseña</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        <div class="card review-card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Detalle de reseña</h5>
+                    {% if selected_review %}
+                        <span class="badge text-bg-secondary">ID: {{ selected_review.id }}</span>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% if selected_review %}
+                        <h4 class="fw-bold">{{ selected_review.name }}</h4>
+                        <p class="mb-1 text-muted">{{ selected_review.address }}</p>
+                        <p class="mb-3"><strong>Coordenadas:</strong> {{ '%.6f'|format(selected_review.latitude) }}, {{ '%.6f'|format(selected_review.longitude) }}</p>
+                        <p class="mb-2"><strong>Valoración:</strong> {{ selected_review.rating }} / 5</p>
+                        <p class="mb-2"><strong>Autor:</strong> {{ selected_review.author_name }} ({{ selected_review.author_email }})</p>
+                        <p class="mb-2"><strong>Token emitido:</strong> {{ selected_review.token_issued_at }}</p>
+                        <p class="mb-2"><strong>Caduca:</strong> {{ selected_review.token_expires_at }}</p>
+                        <p class="mb-3"><strong>Token OAuth:</strong></p>
+                        <div class="token-box bg-light border rounded p-2">{{ selected_review.token }}</div>
 
-                    {% set token = visita.token_visitante or '' %}
-                    {% if token %}
-                        {% set token_short = token[:18] ~ ("…" if token|length > 28 else "") ~ (token[-10:] if token|length > 32 else "") %}
-                        <div class="token-preview">{{ token_short }}</div>
-
-                        {% if token|length > 60 %}
-                            <details class="mt-2">
-                                <summary class="small text-primary mb-1">Mostrar token completo</summary>
-                                <code class="token-full">{{ token }}</code>
-                            </details>
+                        {% if selected_review.images %}
+                            <hr>
+                            <div class="d-flex flex-wrap gap-2">
+                                {% for img in selected_review.images %}
+                                    <a href="{{ img }}" target="_blank">
+                                        <img src="{{ img }}" class="image-thumb border" alt="Imagen de la reseña">
+                                    </a>
+                                {% endfor %}
+                            </div>
                         {% endif %}
                     {% else %}
-                        <small class="text-muted">Token OAuth no disponible</small>
+                        <p class="text-muted">Selecciona una reseña del listado para ver sus detalles, incluidos el token OAuth usado y las imágenes asociadas.</p>
                     {% endif %}
-                </li>
-            {% endif %}
-        {% endfor %}
-    {% else %}
-        <li class="list-group-item text-muted">Aún no hay visitas registradas...</li>
-    {% endif %}
-</ul>
-        </div>
+                </div>
+            </div>
+        </section>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // 1. Configuración del mapa
-        var map = L.map('map').setView([48.8566, 2.3522], 4);
-
+        const map = L.map('map').setView([40.4168, -3.7038], 5);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; OpenStreetMap contributors'
         }).addTo(map);
 
-        // --- SOLUCIÓN ROBUSTA ---
-        // 1. Guardamos los datos como TEXTO primero (con comillas simples)
-        //    Usamos 'safe' para que no rompa el formato JSON.
-        var marcadoresTexto = '{{ marcadores | tojson | safe }}';
+        const reviews  = {{ reviews | tojson | safe }};
+        reviews.forEach(review => {
+            if (!review.latitude || !review.longitude) return;
+            const marker = L.marker([review.latitude, review.longitude]).addTo(map);
+            marker.bindPopup(`<strong>${review.name}</strong><br>${review.address}<br>Valoración: ${review.rating}/5`);
+        });
 
-        // 2. Intentamos convertir ese texto a una LISTA real de JS
-        var marcadores = [];
-        try {
-            marcadores = JSON.parse(marcadoresTexto);
-        } catch (e) {
-            console.error("Error al leer los marcadores:", e);
-            marcadores = []; // Si falla, lista vacía para que no rompa la web
+        if (reviews.length > 0) {
+            const coords = reviews.map(r => [r.latitude, r.longitude]);
+            const bounds = L.latLngBounds(coords);
+            map.fitBounds(bounds, { padding: [30, 30] });
         }
 
-        console.log("Marcadores listos:", marcadores);
-
-        // 3. Pintamos en el mapa
-        if (marcadores && marcadores.length > 0) {
-            marcadores.forEach(function(m) {
-                // Crear el popup
-                var container = document.createElement('div');
-                
-                var titulo = document.createElement('b');
-                titulo.innerText = m.ciudad || "Sin nombre"; 
-                container.appendChild(titulo);
-                
-                container.appendChild(document.createElement('br'));
-
-                if (m.img) {
-                    var imagen = document.createElement('img');
-                    imagen.src = m.img;
-                    imagen.className = 'thumbnail';
-                    imagen.style.marginTop = "5px";
-                    imagen.onerror = function() { this.style.display = 'none'; };
-                    container.appendChild(imagen);
+         async function buscarDireccion() {
+            const query = document.getElementById('searchAddress').value;
+            if (!query) return;
+            try {
+                const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`;
+                const res = await fetch(url, { headers: { 'User-Agent': 'ReViews/1.0' } });
+                const data = await res.json();
+                if (data && data.length > 0) {
+                    const { lat, lon } = data[0];
+                    map.setView([parseFloat(lat), parseFloat(lon)], 14);
+                } else {
+                    alert('No se encontraron coordenadas para esa dirección');
                 }
-                
-                // Asegurar coordenadas numéricas
-                var lat = parseFloat(m.lat);
-                var lon = parseFloat(m.lon);
-
-                // Solo pintamos si las coordenadas son válidas
-                if (!isNaN(lat) && !isNaN(lon)) {
-                    L.marker([lat, lon]).addTo(map)
-                        .bindPopup(container);
-                }
-            });
+            } catch (error) {
+                console.error('Error al buscar la dirección:', error);
+                alert('Error al buscar la dirección');
+            }
         }
     </script>
 </body>

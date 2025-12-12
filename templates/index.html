@@ -1,98 +1,119 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
   <head>
+    <meta charset="UTF-8">
+    <title>ReViews | Inicia sesión</title>
     <script src="https://accounts.google.com/gsi/client" async></script>
     <script>
       async function handleCredentialResponse(response) {
         try {
-            // Enviamos el token a tu nuevo endpoint POST /login
             const res = await fetch("/login", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ token: response.credential })
-            });
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ token: response.credential })
+          });
+
 
             if (res.ok) {
-                // Si el backend dice OK, recargamos la página
-                // para que Jinja detecte la sesión y muestre el dashboard/bienvenida
-                location.reload(); 
+              window.location.href = "/reviews";
             } else {
-                const data = await res.json();
-                alert("Error de autenticación: " + data.detail);
+              const data = await res.json();
+              alert("Error de autenticación: " + data.detail);
             }
         } catch (error) {
-            console.error("Error:", error);
+          console.error("Error:", error);
         }
       }
     </script>
     <style>
       body {
-        font-family: Arial, sans-serif;
-        background-color: #f4f7fc;
-        margin: 0;
-        padding: 0;
+        font-family: "Inter", Arial, sans-serif;
+        background: linear-gradient(135deg, #0d6efd 0%, #3b63f6 50%, #0b3b99 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #0f172a;
+      }
+
+      
+      .card {
+        background: #ffffff;
+        border-radius: 16px;
+        padding: 32px;
+        box-shadow: 0 20px 45px rgba(15, 23, 42, 0.2);
+        max-width: 520px;
+        width: 100%;
         text-align: center;
-        color: #333;
       }
 
       h1 {
-        font-size: 3rem;
-        color: #4CAF50;
-        margin-top: 50px;
-      }
-
-      h2 {
+        margin: 0;
         font-size: 2rem;
-        color: #333;
+        color: #0f172a;
       }
 
-      img {
-        border-radius: 50%;
-        margin-top: 20px;
+      p {
+        color: #334155;
+        line-height: 1.5;
       }
 
-      a {
-        display: inline-block;
-        background-color: #4CAF50;
-        color: white;
-        padding: 10px 20px;
-        margin-top: 20px;
-        text-decoration: none;
-        border-radius: 5px;
-        font-size: 1rem;
+      .features {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin: 24px 0;
+        text-align: left;
       }
 
-      a:hover {
-        background-color: #45a049;
+      .feature {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 12px 14px;
       }
 
-      #g_id_onload {
-        margin-top: 30px;
+      .feature strong {
+        display: block;
+        color: #0f172a;
       }
 
-      .g_id_signin {
+      .signin-btn {
         margin-top: 20px;
       }
     </style>
   </head>
   <body>
-    <h1>Mi App con FastAPI</h1>
-    
-    {% if user %}
-        <h2>Bienvenido, {{ user.name }}</h2>
-        <img src="{{ user.picture }}" width="50">
-        <br>
-        <a href="/mapa">Ir al Mapa</a>
-        <br>
-        <a href="/logout">Cerrar Sesión</a>
-    {% else %}
-        <div
-          id="g_id_onload"
-          data-auto_prompt="false"
-          data-callback="handleCredentialResponse"
-          data-client_id="{{ client_id }}" 
-        ></div>
-        <div class="g_id_signin" data-type="standard"></div>
-    {% endif %}
+    <div class="card">
+      <h1>ReViews</h1>
+      <p>Inicia sesión con tu cuenta de Google para explorar reseñas geolocalizadas, ver detalles de los tokens OAuth usados y crear tus propias valoraciones con imágenes.</p>
+
+      <div class="features">
+        <div class="feature">
+          <strong>OAuth 2.0</strong>
+          Login obligatorio y sesiones seguras.
+        </div>
+        <div class="feature">
+          <strong>Mapas</strong>
+          Marcadores con coordenadas obtenidas por geocoding.
+        </div>
+        <div class="feature">
+          <strong>Reseñas</strong>
+          Valoraciones de 0 a 5 con fotos y datos del autor.
+        </div>
+        <div class="feature">
+          <strong>Tokens</strong>
+          Visualiza el token, fecha de emisión y caducidad.
+        </div>
+      </div>
+
+      <div
+        id="g_id_onload"
+        data-auto_prompt="false"
+        data-callback="handleCredentialResponse"
+        data-client_id="{{ client_id }}"
+      ></div>
+      <div class="signin-btn" data-type="standard"></div>
+    </div>
   </body>
 </html>
